@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# echo 'Cloning Moses github repository (for tokenization scripts)...'
-# git clone https://github.com/moses-smt/mosesdecoder.git
+echo 'Cloning Moses github repository (for tokenization scripts)...'
+git clone https://github.com/moses-smt/mosesdecoder.git
 
-# echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
-# git clone https://github.com/rsennrich/subword-nmt.git
+echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
+git clone https://github.com/rsennrich/subword-nmt.git
 
 SCRIPTS=mosesdecoder/scripts
 TOKENIZER=$SCRIPTS/tokenizer/tokenizer.perl
@@ -20,9 +20,9 @@ lang=fr-en
 prep=fr-en
 tmp=$prep/tmp
 
-data_path='/home/jovyan/export/203-HW1/fr-en/train'
-dev_path='/home/jovyan/export/203-HW1/fr-en/IWSLT13.TED.dev2010.fr-en'
-test_path='/home/jovyan/export/203-HW1/fr-en/IWSLT13.TED.tst2010.fr-en'
+data_path='fr-en/train'
+dev_path='fr-en/IWSLT13.TED.dev2010.fr-en'
+test_path='fr-en/IWSLT13.TED.tst2010.fr-en'
 
 
 echo "pre-processing train data..."
@@ -80,7 +80,7 @@ echo 'Data Preparation completed'
 
 # run fairseq-preprocess
 
-TEXT=/home/jovyan/export/203-HW1/fr-en/tokenized_fr-en
+TEXT=fr-en/tokenized_fr-en
 echo 'Running fairseq-preprocess'
 fairseq-preprocess \
     --source-lang fr --target-lang en \
