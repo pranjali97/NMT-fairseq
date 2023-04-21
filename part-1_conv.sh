@@ -6,7 +6,7 @@ mkdir checkpoints/fconv
 
 fairseq-train \
     fr-en/preprocessed \
-    --arch fconv_wmt_en_fr \
+    --arch fconv \
     --dropout 0.1 \
     --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
     --optimizer nag --clip-norm 0.1 \
