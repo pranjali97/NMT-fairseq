@@ -2,11 +2,11 @@
 
 # running fairseq-train
 echo 'Running Fairseq-train'
-mkdir checkpoints/p1-transfomer
+mkdir checkpoints/transfomer
 
 CUDA_VISIBLE_DEVICES=0 fairseq-train \
-    data-bin/iwslt14.tokenized.de-en \
-    --arch transformer_iwslt_de_en --share-decoder-input-output-embed \
+    fr-en/preprocessed \
+    --arch transformer --share-decoder-input-output-embed \
     --optimizer adam --adam-betas '(0.9, 0.98)' --clip-norm 0.0 \
     --lr 5e-4 --lr-scheduler inverse_sqrt --warmup-updates 4000 \
     --dropout 0.3 --weight-decay 0.0001 \
@@ -17,10 +17,10 @@ CUDA_VISIBLE_DEVICES=0 fairseq-train \
     --eval-bleu-detok moses \
     --eval-bleu-remove-bpe \
     --eval-bleu-print-samples \
-    --best-checkpoint-metric bleu --maximize-best-checkpoint-metric
+    --best-checkpoint-metric bleu --maximize-best-checkpoint-metric --save-dir checkpoints/transfomer
 
 # # Evaluate
 fairseq-generate \
     fr-en/preprocessed \
-    --path ccheckpoints/fconv/checkpoint_best.pt \
+    --path checkpoints/transfomer/checkpoint_best.pt \
     --beam 5 --remove-bpe
