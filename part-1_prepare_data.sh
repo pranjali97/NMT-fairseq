@@ -51,6 +51,7 @@ for l in $src $tgt; do
     perl $TOKENIZER -threads 8 -a -l $l > fr-en/test.$l
 done
 
+mkdir fr-en/tokenized_fr-en
 
 TRAIN=fr-en/train.fr-en
 BPE_CODE=$prep/code
