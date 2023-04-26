@@ -1,10 +1,10 @@
 #!/bin/bash
 
-echo 'Cloning Moses github repository (for tokenization scripts)...'
-git clone https://github.com/moses-smt/mosesdecoder.git
+# echo 'Cloning Moses github repository (for tokenization scripts)...'
+# git clone https://github.com/moses-smt/mosesdecoder.git
 
-echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
-git clone https://github.com/rsennrich/subword-nmt.git
+# echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
+# git clone https://github.com/rsennrich/subword-nmt.git
 
 SCRIPTS=mosesdecoder/scripts
 TOKENIZER=$SCRIPTS/tokenizer/tokenizer.perl
@@ -49,21 +49,31 @@ for l in $src $tgt; do
     perl $TOKENIZER -threads 8 -a -l $l > fr-en/test.$l
 done
 
-echo 'Data Preparation completed'
+mkdir fr-en/tokenized_fr-en
 
-# run fairseq-preprocess
+perl $CLEAN -ratio 1.5 fr-en/train $src $tgt fr-en/tokenized_fr-en/train 1 250
+perl $CLEAN -ratio 1.5 fr-en/valid $src $tgt fr-en/tokenized_fr-en/valid 1 250
 
-mkdir fr-en/moses_preprocessed
+for L in $src $tgt; do
+    cp fr-en/test.$L fr-en/tokenized_fr-en/test.$L
+done
 
-TEXT=fr-en
-echo 'Running fairseq-preprocess'
-fairseq-preprocess \
-    --source-lang fr --target-lang en \
-    --trainpref $TEXT/train --validpref $TEXT/valid --testpref $TEXT/test \
-    --destdir fr-en/moses_preprocessed --thresholdtgt 0 --thresholdsrc 0 \
-    --workers 60
 
-echo 'fairseq-preprocess completed'
+# echo 'Data Preparation completed'
+
+# # run fairseq-preprocess
+
+# mkdir fr-en/moses_preprocessed
+
+# TEXT=fr-en
+# echo 'Running fairseq-preprocess'
+# fairseq-preprocess \
+#     --source-lang fr --target-lang en \
+#     --trainpref $TEXT/train --validpref $TEXT/valid --testpref $TEXT/test \
+#     --destdir fr-en/moses_preprocessed --thresholdtgt 0 --thresholdsrc 0 \
+#     --workers 60
+
+# echo 'fairseq-preprocess completed'
 
 
 
