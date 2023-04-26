@@ -1,10 +1,10 @@
 #!/bin/bash
 
-echo 'Cloning Moses github repository (for tokenization scripts)...'
-git clone https://github.com/moses-smt/mosesdecoder.git
+# echo 'Cloning Moses github repository (for tokenization scripts)...'
+# git clone https://github.com/moses-smt/mosesdecoder.git
 
-echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
-git clone https://github.com/rsennrich/subword-nmt.git
+# echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
+# git clone https://github.com/rsennrich/subword-nmt.git
 
 SCRIPTS=mosesdecoder/scripts
 TOKENIZER=$SCRIPTS/tokenizer/tokenizer.perl
@@ -15,7 +15,7 @@ REM_NON_PRINT_CHAR=$SCRIPTS/tokenizer/remove-non-printing-char.perl
 src=fr
 tgt=en
 lang=fr-en
-prep=fr-en
+prep=fr-en-part2
 tmp=$prep/tmp
 
 data_path='fr-en/train'
@@ -36,7 +36,7 @@ for l in $src $tgt; do
         sed -e 's/<seg id="[0-9]*">\s*//g' | \
         sed -e 's/\s*<\/seg>\s*//g' | \
         sed -e "s/\’/\'/g" | \
-    perl $TOKENIZER -threads 8 -a -l $l > fr-en/dev.$l
+    perl $TOKENIZER -threads 8 -a -l $l > fr-en/valid.$l
 done
 
 echo "pre-processing test data..."
@@ -53,7 +53,9 @@ echo 'Data Preparation completed'
 
 # run fairseq-preprocess
 
-TEXT=fr-en/tokenized_fr-en
+mkdir fr-en/moses_preprocessed
+
+TEXT=fr-en
 echo 'Running fairseq-preprocess'
 fairseq-preprocess \
     --source-lang fr --target-lang en \
