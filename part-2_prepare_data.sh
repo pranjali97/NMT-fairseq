@@ -24,9 +24,10 @@ test_path='fr-en/IWSLT13.TED.tst2010.fr-en'
 
 
 echo "pre-processing train data..."
-
+mkdir fr-en/tokenized_fr-en
+ 
 for l in $src $tgt; do 
-    cat $data_path.$l | perl $NORM_PUNC $l | perl $REM_NON_PRINT_CHAR | perl $TOKENIZER -threads 8 -a -l $l >> fr-en/train.tags.$lang.tok.$l
+    cat $data_path.$l | perl $NORM_PUNC $l | perl $REM_NON_PRINT_CHAR | perl $TOKENIZER -threads 8 -a -l $l >> fr-en/tokenized_fr-en/train.$l
 done
 
 echo "pre-processing dev data..."
@@ -36,7 +37,7 @@ for l in $src $tgt; do
         sed -e 's/<seg id="[0-9]*">\s*//g' | \
         sed -e 's/\s*<\/seg>\s*//g' | \
         sed -e "s/\’/\'/g" | \
-    perl $TOKENIZER -threads 8 -a -l $l > fr-en/valid.$l
+    perl $TOKENIZER -threads 8 -a -l $l > fr-en/tokenized_fr-en/valid.$l
 done
 
 echo "pre-processing test data..."
@@ -46,34 +47,34 @@ for l in $src $tgt; do
         sed -e 's/<seg id="[0-9]*">\s*//g' | \
         sed -e 's/\s*<\/seg>\s*//g' | \
         sed -e "s/\’/\'/g" | \
-    perl $TOKENIZER -threads 8 -a -l $l > fr-en/test.$l
+    perl $TOKENIZER -threads 8 -a -l $l > fr-en/tokenized_fr-en/test.$l
 done
 
-mkdir fr-en/tokenized_fr-en
+mkdir fr-en/cleaned_data
 
-perl $CLEAN -ratio 1.5 fr-en/train $src $tgt fr-en/tokenized_fr-en/train 1 250
-perl $CLEAN -ratio 1.5 fr-en/valid $src $tgt fr-en/tokenized_fr-en/valid 1 250
+perl $CLEAN -ratio 1.5 fr-en/tokenized_fr-en/train $src $tgt fr-en/cleaned_data/train 1 250
+perl $CLEAN -ratio 1.5 fr-en/tokenized_fr-en/valid $src $tgt fr-en/cleaned_data/valid 1 250
 
 for L in $src $tgt; do
-    cp fr-en/test.$L fr-en/tokenized_fr-en/test.$L
+    cp fr-en/tokenized_fr-en/test.$L fr-en/cleaned_data/test.$L
 done
 
 
-# echo 'Data Preparation completed'
+echo 'Data Preparation completed'
 
-# # run fairseq-preprocess
+# run fairseq-preprocess
 
-# mkdir fr-en/moses_preprocessed
+mkdir fr-en/moses_preprocessed
 
-# TEXT=fr-en
-# echo 'Running fairseq-preprocess'
-# fairseq-preprocess \
-#     --source-lang fr --target-lang en \
-#     --trainpref $TEXT/train --validpref $TEXT/valid --testpref $TEXT/test \
-#     --destdir fr-en/moses_preprocessed --thresholdtgt 0 --thresholdsrc 0 \
-#     --workers 60
+TEXT=fr-en/cleaned_data
+echo 'Running fairseq-preprocess'
+fairseq-preprocess \
+    --source-lang fr --target-lang en \
+    --trainpref $TEXT/train --validpref $TEXT/valid --testpref $TEXT/test \
+    --destdir fr-en/moses_preprocessed --thresholdtgt 0 --thresholdsrc 0 \
+    --workers 60
 
-# echo 'fairseq-preprocess completed'
+echo 'fairseq-preprocess completed'
 
 
 
