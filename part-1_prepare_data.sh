@@ -7,13 +7,13 @@ BPEROOT=subword-nmt/subword_nmt
 BPE_TOKENS=40000
 
 CORPORA=(
-    "fr-en/train"
+    "fr-en/train.tags.fr-en"
 )
 
-# if [ ! -d "$SCRIPTS" ]; then
-#     echo "Please set SCRIPTS variable correctly to point to Moses scripts."
-#     exit
-# fi
+if [ ! -d "$SCRIPTS" ]; then
+    echo "Please set SCRIPTS variable correctly to point to Moses scripts."
+    exit
+fi
 
 src=fr
 tgt=en
@@ -55,19 +55,19 @@ for l in $src $tgt; do
     done
 done
 
-# echo "pre-processing dev data..."
-# for l in $src $tgt; do
-#     cat $orig/iwslt13.dev.$l |
-#         perl $TOKENIZER -threads 8 -a -l $l >$tmp/dev.$l
-#     echo ""
-# done
+echo "pre-processing dev data..."
+for l in $src $tgt; do
+    cat $orig/iwslt13.dev.$l |
+        perl $TOKENIZER -threads 8 -a -l $l >$tmp/dev.$l
+    echo ""
+done
 
-# echo "pre-processing test data..."
-# for l in $src $tgt; do
-#     cat $orig/iwslt13.test.$l |
-#         perl $TOKENIZER -threads 8 -a -l $l >$tmp/test.$l
-#     echo ""
-# done
+echo "pre-processing test data..."
+for l in $src $tgt; do
+    cat $orig/iwslt13.test.$l |
+        perl $TOKENIZER -threads 8 -a -l $l >$tmp/test.$l
+    echo ""
+done
 
 
 TRAIN=$tmp/train.fr-en
@@ -94,3 +94,14 @@ perl $CLEAN -ratio 1.5 $tmp/bpe.dev $src $tgt $prep/dev 1 250
 for L in $src $tgt; do
     cp $tmp/bpe.test.$L $prep/test.$L
 done
+
+mkdir preprocessed_data/
+TEXT=iwslt13_fr_en
+echo 'Running fairseq-preprocess'
+fairseq-preprocess \
+    --source-lang fr --target-lang en \
+    --trainpref $TEXT/train --validpref $TEXT/dev --testpref $TEXT/test \
+    --destdir preprocessed_data --thresholdtgt 0 --thresholdsrc 0 \
+    --workers 60
+
+echo 'fairseq-preprocess completed'
