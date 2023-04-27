@@ -1,3 +1,10 @@
+echo 'Cloning Moses github repository (for tokenization scripts)...'
+git clone https://github.com/moses-smt/mosesdecoder.git
+
+echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
+git clone https://github.com/rsennrich/subword-nmt.git
+
+
 SCRIPTS=mosesdecoder/scripts
 TOKENIZER=$SCRIPTS/tokenizer/tokenizer.perl
 CLEAN=$SCRIPTS/training/clean-corpus-n.perl
@@ -14,6 +21,7 @@ if [ ! -d "$SCRIPTS" ]; then
     echo "Please set SCRIPTS variable correctly to point to Moses scripts."
     exit
 fi
+
 
 src=fr
 tgt=en
@@ -95,13 +103,9 @@ for L in $src $tgt; do
     cp $tmp/bpe.test.$L $prep/test.$L
 done
 
-mkdir preprocessed_data/
-TEXT=iwslt13_fr_en
-echo 'Running fairseq-preprocess'
+
 fairseq-preprocess \
     --source-lang fr --target-lang en \
-    --trainpref $TEXT/train --validpref $TEXT/dev --testpref $TEXT/test \
-    --destdir preprocessed_data --thresholdtgt 0 --thresholdsrc 0 \
+    --trainpref iwslt13_fr_en/train --validpref iwslt13_fr_en/dev --testpref iwslt13_fr_en/test \
+    --destdir fr-en/moses_preprocessed --thresholdtgt 0 --thresholdsrc 0 \
     --workers 60
-
-echo 'fairseq-preprocess completed'
