@@ -11,69 +11,53 @@ CLEAN=$SCRIPTS/training/clean-corpus-n.perl
 NORM_PUNC=$SCRIPTS/tokenizer/normalize-punctuation.perl
 REM_NON_PRINT_CHAR=$SCRIPTS/tokenizer/remove-non-printing-char.perl
 BPEROOT=subword-nmt/subword_nmt
-BPE_TOKENS=40000
+BPE_TOKENS=10000
 
 CORPORA=(
     "fr-en/train.tags.fr-en"
 )
 
-if [ ! -d "$SCRIPTS" ]; then
-    echo "Please set SCRIPTS variable correctly to point to Moses scripts."
-    exit
-fi
-
+dev_path='fr-en/IWSLT13.TED.dev2010.fr-en'
+test_path='fr-en/IWSLT13.TED.tst2010.fr-en'
 
 src=fr
 tgt=en
 lang=fr-en
-prep=iwslt13_fr_en
+prep=tokenized_data
 tmp=$prep/tmp
-orig=data
+
 
 mkdir -p $orig $tmp $prep
 
-echo "grep dev data..."
-for l in $src $tgt; do
-    grep '<seg id' $orig/"fr-en/IWSLT13.TED.dev2010.fr-en".$l.xml | \
-        sed -e 's/<seg id="[0-9]*">\s*//g' | \
-        sed -e 's/\s*<\/seg>\s*//g' | \
-        sed -e "s/\’/\'/g" | \
-    perl $TOKENIZER -threads 8 -a -l $l > $orig/iwslt13.dev.$l
-    echo ""
-done
 
-echo "grep test data..."
-for l in $src $tgt; do
-    grep '<seg id' $orig/"fr-en/IWSLT13.TED.tst2010.fr-en".$l.xml | \
-        sed -e 's/<seg id="[0-9]*">\s*//g' | \
-        sed -e 's/\s*<\/seg>\s*//g' | \
-        sed -e "s/\’/\'/g" | \
-    perl $TOKENIZER -threads 8 -a -l $l > $orig/iwslt13.test.$l
-    echo ""
-done
-
-echo "pre-processing train data..."
+#train data
 for l in $src $tgt; do
     rm $tmp/train.$l
     for f in "${CORPORA[@]}"; do
-        cat $orig/$f.$l |
+        cat $f.$l |
             perl $NORM_PUNC $l |
             perl $REM_NON_PRINT_CHAR |
             perl $TOKENIZER -threads 8 -a -l $l >>$tmp/train.$l
     done
 done
 
-echo "pre-processing dev data..."
+# dev data
 for l in $src $tgt; do
-    cat $orig/iwslt13.dev.$l |
-        perl $TOKENIZER -threads 8 -a -l $l >$tmp/dev.$l
+    grep '<seg id' $dev_path.$l.xml | \
+        sed -e 's/<seg id="[0-9]*">\s*//g' | \
+        sed -e 's/\s*<\/seg>\s*//g' | \
+        sed -e "s/\’/\'/g" | \
+    perl $TOKENIZER -threads 8 -a -l $l > $tmp/dev.$l
     echo ""
 done
 
-echo "pre-processing test data..."
+#test data
 for l in $src $tgt; do
-    cat $orig/iwslt13.test.$l |
-        perl $TOKENIZER -threads 8 -a -l $l >$tmp/test.$l
+    grep '<seg id' $test_path.$l.xml | \
+        sed -e 's/<seg id="[0-9]*">\s*//g' | \
+        sed -e 's/\s*<\/seg>\s*//g' | \
+        sed -e "s/\’/\'/g" | \
+    perl $TOKENIZER -threads 8 -a -l $l > $tmp/test.$l
     echo ""
 done
 
@@ -103,9 +87,9 @@ for L in $src $tgt; do
     cp $tmp/bpe.test.$L $prep/test.$L
 done
 
-
+mkdir fr-en/moses_BPE_preprocessed
 fairseq-preprocess \
     --source-lang fr --target-lang en \
-    --trainpref iwslt13_fr_en/train --validpref iwslt13_fr_en/dev --testpref iwslt13_fr_en/test \
-    --destdir fr-en/moses_preprocessed --thresholdtgt 0 --thresholdsrc 0 \
+    --trainpref tokenized_data/train --validpref tokenized_data/dev --testpref tokenized_data/test \
+    --destdir fr-en/moses_BPE_preprocessed --thresholdtgt 0 --thresholdsrc 0 \
     --workers 60

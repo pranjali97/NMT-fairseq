@@ -13,7 +13,6 @@ CORPORA=(
     "fr-en/train.tags.fr-en"
 )
 
-# data_path='fr-en/train'
 dev_path='fr-en/IWSLT13.TED.dev2010.fr-en'
 test_path='fr-en/IWSLT13.TED.tst2010.fr-en'
 
@@ -22,7 +21,7 @@ tgt=en
 lang=fr-en
 prep=tokenized_data
 tmp=$prep/tmp
-# orig=fr-en
+
 
 mkdir -p $orig $tmp $prep
 
@@ -57,9 +56,6 @@ for l in $src $tgt; do
     perl $TOKENIZER -threads 8 -a -l $l > $tmp/test.$l
     echo ""
 done
-
-
-
 
 
 perl $CLEAN -ratio 1.5 $tmp/train $src $tgt $prep/train 1 250
