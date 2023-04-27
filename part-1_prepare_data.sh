@@ -1,95 +1,96 @@
-#!/bin/bash
-
-echo 'Cloning Moses github repository (for tokenization scripts)...'
-git clone https://github.com/moses-smt/mosesdecoder.git
-
-echo 'Cloning Subword NMT repository (for BPE pre-processing)...'
-git clone https://github.com/rsennrich/subword-nmt.git
-
 SCRIPTS=mosesdecoder/scripts
 TOKENIZER=$SCRIPTS/tokenizer/tokenizer.perl
 CLEAN=$SCRIPTS/training/clean-corpus-n.perl
 NORM_PUNC=$SCRIPTS/tokenizer/normalize-punctuation.perl
 REM_NON_PRINT_CHAR=$SCRIPTS/tokenizer/remove-non-printing-char.perl
 BPEROOT=subword-nmt/subword_nmt
-BPE_TOKENS=10000
+BPE_TOKENS=40000
+
+CORPORA=(
+    "fr-en/train"
+)
+
+# if [ ! -d "$SCRIPTS" ]; then
+#     echo "Please set SCRIPTS variable correctly to point to Moses scripts."
+#     exit
+# fi
 
 src=fr
 tgt=en
 lang=fr-en
-prep=fr-en
+prep=iwslt13_fr_en
 tmp=$prep/tmp
+orig=data
 
-data_path='fr-en/train'
-dev_path='fr-en/IWSLT13.TED.dev2010.fr-en'
-test_path='fr-en/IWSLT13.TED.tst2010.fr-en'
+mkdir -p $orig $tmp $prep
 
+echo "grep dev data..."
+for l in $src $tgt; do
+    grep '<seg id' $orig/"fr-en/IWSLT13.TED.dev2010.fr-en".$l.xml | \
+        sed -e 's/<seg id="[0-9]*">\s*//g' | \
+        sed -e 's/\s*<\/seg>\s*//g' | \
+        sed -e "s/\’/\'/g" | \
+    perl $TOKENIZER -threads 8 -a -l $l > $orig/iwslt13.dev.$l
+    echo ""
+done
+
+echo "grep test data..."
+for l in $src $tgt; do
+    grep '<seg id' $orig/"fr-en/IWSLT13.TED.tst2010.fr-en".$l.xml | \
+        sed -e 's/<seg id="[0-9]*">\s*//g' | \
+        sed -e 's/\s*<\/seg>\s*//g' | \
+        sed -e "s/\’/\'/g" | \
+    perl $TOKENIZER -threads 8 -a -l $l > $orig/iwslt13.test.$l
+    echo ""
+done
 
 echo "pre-processing train data..."
-
-for l in $src $tgt; do 
-    cat $data_path.$l | perl $NORM_PUNC $l | perl $REM_NON_PRINT_CHAR | perl $TOKENIZER -threads 8 -a -l $l >> fr-en/train.tags.$lang.tok.$l
-done
-
-echo "pre-processing dev data..."
-
 for l in $src $tgt; do
-    grep '<seg id' $dev_path.$l.xml | \
-        sed -e 's/<seg id="[0-9]*">\s*//g' | \
-        sed -e 's/\s*<\/seg>\s*//g' | \
-        sed -e "s/\’/\'/g" | \
-    perl $TOKENIZER -threads 8 -a -l $l > fr-en/dev.$l
+    rm $tmp/train.$l
+    for f in "${CORPORA[@]}"; do
+        cat $orig/$f.$l |
+            perl $NORM_PUNC $l |
+            perl $REM_NON_PRINT_CHAR |
+            perl $TOKENIZER -threads 8 -a -l $l >>$tmp/train.$l
+    done
 done
 
-echo "pre-processing test data..."
+# echo "pre-processing dev data..."
+# for l in $src $tgt; do
+#     cat $orig/iwslt13.dev.$l |
+#         perl $TOKENIZER -threads 8 -a -l $l >$tmp/dev.$l
+#     echo ""
+# done
 
-for l in $src $tgt; do
-    grep '<seg id' $test_path.$l.xml | \
-        sed -e 's/<seg id="[0-9]*">\s*//g' | \
-        sed -e 's/\s*<\/seg>\s*//g' | \
-        sed -e "s/\’/\'/g" | \
-    perl $TOKENIZER -threads 8 -a -l $l > fr-en/test.$l
-done
+# echo "pre-processing test data..."
+# for l in $src $tgt; do
+#     cat $orig/iwslt13.test.$l |
+#         perl $TOKENIZER -threads 8 -a -l $l >$tmp/test.$l
+#     echo ""
+# done
 
-mkdir fr-en/tokenized_fr-en
 
-TRAIN=fr-en/train.fr-en
+TRAIN=$tmp/train.fr-en
 BPE_CODE=$prep/code
-echo $BPE_CODE
 rm -f $TRAIN
 for l in $src $tgt; do
-    cat fr-en/train.$l >> $TRAIN
+    cat $tmp/train.$l >>$TRAIN
 done
 
+
 echo "learn_bpe.py on ${TRAIN}..."
-python $BPEROOT/learn_bpe.py -s $BPE_TOKENS < $TRAIN > $BPE_CODE
+python3 $BPEROOT/learn_bpe.py -s $BPE_TOKENS <$TRAIN >$BPE_CODE
 
 for L in $src $tgt; do
     for f in train.$L dev.$L test.$L; do
         echo "apply_bpe.py to ${f}..."
-        python $BPEROOT/apply_bpe.py -c $BPE_CODE < fr-en/$f > fr-en/tokenized_fr-en/bpe.$f
+        python3 $BPEROOT/apply_bpe.py -c $BPE_CODE < $tmp/$f > $tmp/bpe.$f
     done
 done
 
-perl $CLEAN -ratio 1.5 fr-en/tokenized_fr-en/bpe.train $src $tgt fr-en/tokenized_fr-en/train 1 250
-perl $CLEAN -ratio 1.5 fr-en/tokenized_fr-en/bpe.dev $src $tgt fr-en/tokenized_fr-en/valid 1 250
+perl $CLEAN -ratio 1.5 $tmp/bpe.train $src $tgt $prep/train 1 250
+perl $CLEAN -ratio 1.5 $tmp/bpe.dev $src $tgt $prep/dev 1 250
 
 for L in $src $tgt; do
-    cp fr-en/tokenized_fr-en/bpe.test.$L fr-en/tokenized_fr-en/test.$L
+    cp $tmp/bpe.test.$L $prep/test.$L
 done
-echo 'Data Preparation completed'
-
-# run fairseq-preprocess
-
-TEXT=fr-en/tokenized_fr-en
-echo 'Running fairseq-preprocess'
-fairseq-preprocess \
-    --source-lang fr --target-lang en \
-    --trainpref $TEXT/train --validpref $TEXT/valid --testpref $TEXT/test \
-    --destdir fr-en/preprocessed --thresholdtgt 0 --thresholdsrc 0 \
-    --workers 60
-
-echo 'fairseq-preprocess completed'
-
-
-
